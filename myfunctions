@@ -1,4 +1,9 @@
 library(MTS)
+library(KFAS)
+library(FKF.SP)
+library(Rcpp)
+library(RcppArmadillo)
+library(Matrix)
 #################
 #generazione matrici
 #################
