@@ -1,0 +1,7 @@
+
+KFAS
+Warning messages:
+1: In solve_dlyap_iter(Matrix::Matrix(mT, sparse = TRUE), mR %*% tcrossprod(mQ,  :
+  Lyapunov equation solver did not converge within 200 iterations.
+2: In solve_dlyap_iter(Matrix::Matrix(mT, sparse = TRUE), mR %*% tcrossprod(mQ,  :
+  Lyapunov equation solver did not converge within 200 iterations.
