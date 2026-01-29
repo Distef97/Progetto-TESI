@@ -1,6 +1,6 @@
 #Diversi VARMA non identificati
-setwd("~/GitHub/Tesis/PROF")
-Rcpp::sourceCpp("rcpp1.cpp")
+setwd("~/R/Progetto-TESi")
+Rcpp::sourceCpp("rcpp.cpp")
 source("functions.R")
 source("myfunctions.R")
 set.seed(123)
@@ -66,7 +66,7 @@ for (k in 1:length(n[1:maxn])) {
 #VARIANZA
 resvarma<-cbind(diff_irf, biases, VARIANZA)
 saveRDS(resvarma, file = "tabellaIH.RDS")
-kable(risultati_varma1[[c(1,2)]]$ar, format = "latex")
+kable(resvarma, format = "latex")
 saveRDS(risultati_varma1, file = "risultatiIH.RDS")
 saveRDS(irf2, file = "irf2IH.RDS")
 risultati_varma1[[1000]]
@@ -117,13 +117,13 @@ saveRDS(irf2, file = "irf2NET.RDS")
 risultati_varma1[[1000]]
 dim(irf2[[1]])
 varma1<-rvarma(3,1,1)
-predict.varma(varma1, 10)
-predict.varma(mod1, 10)
+#predict.varma(varma1, 10)
+#predict.varma(mod1, 10)
 
 
 
 
-#####################à
+#####################
 #############àFKF
 ##########################
 
@@ -157,26 +157,26 @@ for (k in 1:length(n[1:4])) {
 #VARIANZA
 resvarma<-cbind(diff_irf, biases, VARIANZA)
 saveRDS(resvarma, file = "tabellaFKF.RDS")
-kable(risultati_varma1[[c(1,2)]]$ar, format = "latex")
+#kable(risultati_varma1[[c(1,2)]]$ar, format = "latex")
 saveRDS(risultati_varma1, file = "risultatiFKF.RDS")
 saveRDS(irf2, file = "irf2FKF.RDS")
 risultati_varma1[[1000]]
 dim(irf2[[1]])
 varma1<-rvarma(3,1,1)
-predict.varma(varma1, 10)
-predict.varma(mod1, 10)
+#predict.varma(varma1, 10)
+#predict.varma(mod1, 10)
 
 
 
-#####################à
+#####################
 ############# KFAS
 ##########################
 
-
+mod1
 
 for (k in 1:length(n[1:4])) {
   print(k)
-  resih<-simulvarmanoidkfas(NV = n[k],simulazioni = 1000)
+  resih<-simulvarmanoidkfas(NV = n[k],simulazioni = 500)
   diff_irf[k]<-resih$diff_irf
   irf1c<-model$irf1[,,-1]
   resih$irf2<-resih$irf2[-(1:(w*w)),]
@@ -202,14 +202,14 @@ for (k in 1:length(n[1:4])) {
 #VARIANZA
 resvarma<-cbind(diff_irf, biases, VARIANZA)
 saveRDS(resvarma, file = "tabellaKFAS.RDS")
-kable(risultati_varma1[[c(1,2)]]$ar, format = "latex")
+#kable(risultati_varma1[[c(1,2)]]$ar, format = "latex")
 saveRDS(risultati_varma1, file = "risultatiKFAS.RDS")
 saveRDS(irf2, file = "irf2KFAS.RDS")
 risultati_varma1[[1000]]
 dim(irf2[[1]])
 varma1<-rvarma(3,1,1)
-predict.varma(varma1, 10)
-predict.varma(mod1, 10)
+#predict.varma(varma1, 10)
+#predict.varma(mod1, 10)
 
 
 
