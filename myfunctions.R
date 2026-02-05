@@ -1,9 +1,8 @@
 library(MTS)
-library(KFAS)
-library(FKF.SP)
-library(Rcpp)
-library(RcppArmadillo)
-library(Matrix)
+library(fable)
+library(tsibble)
+library(dplyr)
+library(tidyr)
 #################
 #generazione matrici
 #################
@@ -512,7 +511,7 @@ simulvarmanoidfkf<-function(NV=1000, simulazioni=5){
   indices<-matrix(c(1:((maxl+1)*w*w)),ncol=w*w, byrow=TRUE)
   irf2_save<-c()
   diff_irf<-c()
-  risultati_varma <- vector("list", simulazioni) # Pre-allocazione per efficienza
+  
   for (o in 1:simulazioni) {
     tryCatch({
       print(o)
@@ -1059,6 +1058,160 @@ simulvarmanoidvar<-function(NV=1000, simulazioni=5){
   return(results)
 }
 
+################################################
+##########################FABLE
+#############################################################
+simulvarmanoidfable<-function(NV=1000, simulazioni=5){
+  irf_err<-array(0,c(simulazioni,(w*w)*(maxl+1),2))
+  indices<-matrix(c(1:((maxl+1)*w*w)),ncol=w*w, byrow=TRUE)
+  irf2_save<-c()
+  diff_irf<-c()
+  risultati_varma <- vector("list", simulazioni)
+  
+  for (o in 1:simulazioni) {
+    print(o)
+    
+    Y <- sim_varma(mod1, n = 1000)
+    #matplot(Y, type = "l")#potrei farlo per tutte e tre le serie
+    dati_series <- tibble(
+      date = seq(as.Date("2000-01-01"), by = "day", length.out = 1000),
+      Y1 = Y[,1],
+      Y2 = Y[,2],
+      Y3 = Y[,3]
+    )
+    dati_ts <- as_tsibble(dati_series, index = date)
+    scan_gaps(dati_ts)
+    dati_ts <- dati_ts %>% 
+      fill_gaps()
+    
+    #dati_ts <- dati_ts %>%
+    #  fill(Y1, Y2, .direction = "down")
+    # 2. Stima del modello VARMA
+    # Esempio: VARMA(1,1) -> AR=1, MA=1. d=0 indica nessuna integrazione (stazionario)
+    ih_fit <-  tryCatch({dati_ts %>%
+        model(
+          mio_varma = VARIMA(vars(Y1, Y2, Y3) ~ pdq(2, 0, 2), identification = "kronecker_indices")
+        )  %>%
+        convert_fable_varma()
+    }, error = function(e) {
+      message(paste("Errore nella simulazione", o, "- Tentativo :", e$message))
+      return(NULL) # Ritorna NULL se fallisce
+    })
+    
+    #coefficienti<-tidy(fit)
+    
+    #Stima del VARMA(secondo hannan o altri processi)
+    #ih_fit <- varma_from_var(Y, s, l, TRUE)
+    #ss_fit1 <- ss_varma_kfas(Y, s, s, TRUE)#troppa potenza di calcolo?
+    #tsay <- VARMACpp(Y, s, s, TRUE, details = FALSE) #mi genera Phi e Theta ma non in diverse matrici
+    # simte con: VARMACpp, ss_varma
+    roots <- inv_roots(ih_fit, plot = F)
+    while (!(all(Mod(roots$ar) < 1) & all(Mod(roots$ma) < 1))) {
+      Y <- sim_varma(mod1, n = 1000)
+      dati_series <- tibble(
+        date = seq(as.Date("2000-01-01"), by = "day", length.out = 1000),
+        Y1 = Y[,1],
+        Y2 = Y[,2],
+        Y3 = Y[,3]
+      )
+      dati_ts <- as_tsibble(dati_series, index = date)
+      scan_gaps(dati_ts)
+      dati_ts <- dati_ts %>% 
+        fill_gaps()
+      
+      #dati_ts <- dati_ts %>%
+      #  fill(Y1, Y2, .direction = "down")
+      # 2. Stima del modello VARMA
+      # Esempio: VARMA(1,1) -> AR=1, MA=1. d=0 indica nessuna integrazione (stazionario)
+      ih_fit <- tryCatch({dati_ts %>%
+          model(
+            mio_varma = VARIMA(vars(Y1, Y2, Y3) ~ pdq(2, 0, 2), identification = "kronecker_indices")
+          )  %>%
+          convert_fable_varma()
+      }, error = function(e) {
+        message(paste("Errore nella simulazione", o, "- Tentativo :", e$message))
+        return(NULL) # Ritorna NULL se fallisce
+      })
+      roots <- inv_roots(ih_fit, plot = F)}
+    
+    risultati_varma[[o]]<-ih_fit
+    
+    irf2 <- irf(
+      ih_fit,
+      maxlag = maxl,
+      orth = "none",
+      plot = FALSE
+    )
+    
+    
+    
+    psi_err<-c()
+    for(i in 1:(maxl+1)){psi_err<-cbind(psi_err, irf1[,,i]-irf2[,,i])}
+    
+    diff_irf<-c(diff_irf, irf_distance(irf1,irf2))
+    
+    irf_err[o,,1]<-as.numeric(psi_err)
+    irf2<-as.vector(irf2)
+    irf2_save<-cbind(irf2_save,irf2)
+  }
+  
+  #nrow(irf_err[,,1]) #nrow-> sono ogni simulazione
+  means1<-colMeans(irf_err[,,1])#errori della stima delle
+  RMSE1<-sqrt(colMeans((irf_err[,,1])^2))
+  #Irf con stima del modello di Hannan
+  #length(means1)
+  valori<-c()
+  for (i in 1:(maxl+1)) {
+    valori<-cbind(valori, mean(means1[indices[i,]]))
+  }
+  #valori
+  RMS<-c()
+  for (i in 1:(maxl+1)) {
+    RMS<-cbind(RMS, mean(RMSE1[indices[i,]]))
+  }
+  #varianze errori
+  var1<-apply(irf_err[,,1], 2, var)
+  
+  values<-c()
+  for (i in 1:(maxl+1)) {
+    values<-cbind(values, mean(var1[indices[i,]]))
+  }
+  #values
+  #coverage
+  #da rifareeee
+  irf_min<-c()
+  irf_max<-c()
+  long<-length(irf2_save[,1])
+  for (i in 1:long) {
+    irf_min<-cbind(irf_min,min(irf2_save[i,]))
+    irf_max<-cbind(irf_max,max(irf2_save[i,]))
+  }
+  irf1_val<-as.vector(irf1)
+  irf_min<-as.vector(irf_min)
+  irf_max<-as.vector(irf_max)
+  coverage<-mean(irf1_val<irf_max&irf1_val>irf_min)
+  
+  results<-list(
+    NV=NV,
+    simulazioni=simulazioni,
+    valori=valori,
+    RMSE=RMS,
+    values=values,
+    coverage=coverage,
+    differenze_irf=diff_irf,
+    diff_irf=mean(diff_irf),
+    irf2=irf2_save,
+    varianza=mean(apply(irf2_save, 1,var)),
+    risultati_varma=risultati_varma
+    
+    
+    
+    
+    
+  )
+  return(results)
+}
+
 gen_varma_noid_simulation<- function(seed=123, maxl=7, part="varma2", NV=50, simulazioni=1000){
   if (!part %in% c("var","varma2", "varma3")) {
     
@@ -1153,6 +1306,7 @@ gen_varma_noid_simulation<- function(seed=123, maxl=7, part="varma2", NV=50, sim
   indices<-matrix(c(1:((maxl+1)*w*w)),ncol=w*w, byrow=TRUE)
   irf2_save<-c()
   diff_irf<-c()
+  
   
   for (o in 1:simulazioni) {
     
