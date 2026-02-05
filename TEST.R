@@ -211,5 +211,43 @@ varma1<-rvarma(3,1,1)
 #predict.varma(varma1, 10)
 #predict.varma(mod1, 10)
 
+############################################################
+########################FABLE
+########################################################
+for (k in 1:length(n[1:maxn])) {
+  print(k)
+  resih<-simulvarmanoidfable(NV = n[k],simulazioni = 1000)
+  diff_irf[k]<-resih$diff_irf
+  irf1c<-model$irf1[,,-1]
+  resih$irf2<-resih$irf2[-(1:(w*w)),]
+  irf2[[k]]<-resih$irf2
+  risultati_varma1[(1+1000*(k-1)):(1000+1000*(k-1))]<-resih$risultati_varma
+  bias<-matrix(0, length(irf1c), resih$simulazioni)
+  for (i in 1:resih$simulazioni) {
+    bias[,i]<-abs(irf1c-resih$irf2[,i])
+  }
+  biases[k]<-mean(rowMeans(bias))
+  variance<-c()
+  for (i in 1:resih$simulazioni) {
+    variance[i]<-var(resih$irf2[,i])
+  }
+  VARIANZA[k]<-mean(variance)
+}
+
+
+
+#diff_irf
+#biases
+#VARIANZA
+resvarma<-cbind(diff_irf, biases, VARIANZA)
+saveRDS(resvarma, file = "tabellaIH.RDS")
+kable(risultati_varma1[[c(1,2)]]$ar, format = "latex")
+saveRDS(risultati_varma1, file = "risultatiIH.RDS")
+saveRDS(irf2, file = "irf2IH.RDS")
+risultati_varma1[[1000]]
+dim(irf2[[1]])
+varma1<-rvarma(3,1,1)
+predict.varma(varma1, 10)
+predict.varma(mod1, 10)
 
 
