@@ -1,5 +1,6 @@
 #Diversi VARMA non identificati
-setwd("~/Progetto-TESi")
+setwd("~/RStudio/GIthub/Progetto-TESI")
+setwd("C:/Users/simon/Documents/RStudio/GIthub/Progetto-TESI")
 Rcpp::sourceCpp("rcpp.cpp")
 source("functions.R")
 source("myfunctions.R")
@@ -8,7 +9,7 @@ library(knitr) #Per latex
 
 ####1
 model<-gen_varma_noid(seed = 123,maxl = 5, part = "varma2")
-#model<-gen_varma_noid(seed = 123,maxl = 5, part = "varma3")
+model<-gen_varma_noid(seed = 123,maxl = 5, part = "varma3")
 #model<-gen_varma_noid(seed = 123,maxl = 5, part = "var")
 set.seed(123)
 #model<-gen_varma_noid_grade(2, maxl = 5)
@@ -249,5 +250,4 @@ dim(irf2[[1]])
 varma1<-rvarma(3,1,1)
 predict.varma(varma1, 10)
 predict.varma(mod1, 10)
-
 
