@@ -1106,7 +1106,10 @@ simulvarmanoidfable<-function(NV=1000, simulazioni=5){
     #tsay <- VARMACpp(Y, s, s, TRUE, details = FALSE) #mi genera Phi e Theta ma non in diverse matrici
     # simte con: VARMACpp, ss_varma
     roots <- inv_roots(ih_fit, plot = F)
-    while (!(all(Mod(roots$ar) < 1) & all(Mod(roots$ma) < 1))) {
+    while (tryCatch({!(all(Mod(roots$ar) < 1) & all(Mod(roots$ma) < 1))}, error = function(e) {
+      
+      return(TRUE) # Ritorna NULL se fallisce
+    })) {
       Y <- sim_varma(mod1, n = 1000)
       dati_series <- tibble(
         date = seq(as.Date("2000-01-01"), by = "day", length.out = 1000),
